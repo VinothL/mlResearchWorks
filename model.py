@@ -45,12 +45,13 @@ class PositionalEmbedding(nn.Module):
         # x shape would be (batch_size, seq_length, embedding_dim)
         # We are slicing the pe since the input length could be of varying size 
         # Padding is alternative instead of slicing. But that would unnecessary computation and wasting the memory
-        # Better to use slicing especially when the seq_len = 512, the computation and memory wastage would be significant 
-        
+        # Better to use slicing especially when the seq_len = 512, the padding would cause significant computation and memory wastage 
+
         x = x + (self.pe[:,:x.shape[1],:]).requires_grad_(False)
         return self.dropout(x)
 
 
     
+
 
     

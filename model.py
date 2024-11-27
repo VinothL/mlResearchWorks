@@ -38,7 +38,11 @@ class PositionalEmbedding(nn.Module):
         #(1, seq_Len, d_model)
         pe = pe.unsequeeze(0)
 
-        self.register_buffer(pe) 
+        self.register_buffer('pe', pe) 
+
+    def forward(self, x):
+        x = x + (self.pe[:,:x.shape[1],:]).requires_grad_(False)
+        return self.dropout(x)
 
 
     

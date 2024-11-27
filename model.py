@@ -13,7 +13,17 @@ class InputEmbeddings(nn.Module):
 
     
     def forward(self, x):
+            
+        """
+            d_model : embedding dimensions 
+            vocab_size : unique vocab words/tokens 
+            x : input matrix (batch_size = 1, seq_len)
+            output matrix : (1,seq_len, d_model)
+    
+        """
         return self.embedding(x) * math.sqrt(self.d_model) # multiply sqrt of d_model factor as mentioned in the paper
+        
+
 
 class PositionalEmbedding(nn.Module):
 
@@ -42,13 +52,43 @@ class PositionalEmbedding(nn.Module):
 
     def forward(self, x):
 
-        # x shape would be (batch_size, seq_length, embedding_dim)
-        # We are slicing the pe since the input length could be of varying size 
-        # Padding is alternative instead of slicing. But that would unnecessary computation and wasting the memory
-        # Better to use slicing especially when the seq_len = 512, the padding would cause significant computation and memory wastage 
 
+        
+        """
+        x: input matrix of shape (1,6, 512)
+        return matrix : positional embedded matrix of shape (1,6,512)
+
+        Notes: 
+        x shape would be (batch_size, seq_length, embedding_dim)
+        We are slicing the pe since the input length could be of varying size 
+        Padding is alternative instead of slicing. But that would unnecessary computation and wasting the memory
+        Better to use slicing especially when the seq_len = 512, the padding would cause significant computation and memory wastage 
+        """
         x = x + (self.pe[:,:x.shape[1],:]).requires_grad_(False)
         return self.dropout(x)
+        
+
+class LayerNormalization (nn.Module):
+
+    def __init__(self, eps:float = 10 ** -6) -> None : 
+        
+        super.__init__()
+        self.eps = eps 
+        self. alpha = nn.Parameter(torch.ones(1)) # Multiplied
+        self. bias = nn.Parameter(torch.zeros(1)) # Added 
+
+    def forward (self, x):
+        """
+        x : input matrix (1,6,512)
+        output matrix : (1,6,512)
+        """
+
+        mean = x.mean(dim = -1, keepdim = True )
+        std = x.std(dim = -1, keepdim = True )
+
+        return self.alpha * (x - mean) / (std + self.eps ) + self.bias 
+    
+
 
 
     

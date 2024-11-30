@@ -31,7 +31,7 @@ class PositionalEmbedding(nn.Module):
         
         super().__init__()
         self.d_model = d_model
-        self.seq.len = seq_len 
+        self.seq_len = seq_len 
         self.dropout = nn.Dropout(dropout)
 
         #Create the matrix of (seq_len,d_model)
@@ -46,7 +46,7 @@ class PositionalEmbedding(nn.Module):
         pe[:,1::2] = torch.cos(position *  div_term)
 
         #(1, seq_Len, d_model)
-        pe = pe.unsequeeze(0)
+        pe = pe.unsqueeze(0)
 
         self.register_buffer('pe', pe) 
 
@@ -100,7 +100,7 @@ class FeedForwardBlock(nn.Module):
     def forward(self,x):
         
         #(Batch = 1, seq_len, d_model) -> (1, seq_len, d_ff) --> (1,seq_len,d_model)
-        return self.linear_2(self.dropout(nn.ReLU(self.linear_1(x))))
+        return self.linear_2(self.dropout(torch.relu(self.linear_1(x))))
 
 class MultiHeadAttentionBlock(nn.Module):
 
@@ -134,7 +134,7 @@ class MultiHeadAttentionBlock(nn.Module):
         if dropout is not None: 
             attention_scores = dropout(attention_scores)
 
-        return (attention_scores @ value) , attention_scores 
+        return (attention_scores @ value), attention_scores
     
     def forward( self, q, k, v , mask):
 
@@ -148,7 +148,7 @@ class MultiHeadAttentionBlock(nn.Module):
         key = key.view(key.shape[0],key.shape[1],self.h, self.d_k ).transpose(1,2)
         value = value.view(value.shape[0],value.shape[1],self.h, self.d_k ).transpose(1,2)
 
-        x, attention_scores = MultiHeadAttentionBlock.attention(query,key,value,mask)
+        x, attention_scores = MultiHeadAttentionBlock.attention(query,key,value,mask,self.dropout)
 
         # (Batch, h, seq_len, d_k ) --> (Batch, seq_len, h, d_k) --> (Batch, seq_len, d_model)
         x = x.transpose(1,2).contiguous().view(x.shape[0],-1, self.h * self.d_k)
@@ -157,7 +157,7 @@ class MultiHeadAttentionBlock(nn.Module):
         return self.w_o(x)
     
 
-class ResidualConnection(nn.module):
+class ResidualConnection(nn.Module):
 
     def __init__(self, dropout:float) -> None:
         super().__init__()
@@ -169,7 +169,7 @@ class ResidualConnection(nn.module):
         return x + self.dropout(sublayer(self.norm(x)))
 
 
-class EncoderBlock(nn.module):
+class EncoderBlock(nn.Module):
 
     def __init__(self, self_attention_block : MultiHeadAttentionBlock, feed_forward_block: FeedForwardBlock, dropout:float):
         super().__init__()
@@ -180,8 +180,9 @@ class EncoderBlock(nn.module):
     def forward(self, x, src_mask):
         x = self.residual_connections[0](x, lambda x: self.self_attention_block(x,x,x,src_mask) )
         x = self.residual_connections[1](x,self.feed_forward_block) 
+        return x
 
-class Encoder(nn.module):
+class Encoder(nn.Module):
 
     def __init__(self , layers:nn.ModuleList):
         super().__init__()
@@ -194,7 +195,7 @@ class Encoder(nn.module):
         
         return self.norm(x)
 
-class DecoderBlock(nn.module):
+class DecoderBlock(nn.Module):
 
     def __init__(self, self_attention_block:MultiHeadAttentionBlock, cross_attention_block:MultiHeadAttentionBlock, feed_forward_block:FeedForwardBlock, dropout:float) -> None:
 
@@ -206,11 +207,11 @@ class DecoderBlock(nn.module):
 
     def forward(self,x,encoder_output,src_mask,tgt_mask):
         x = self.residual_connections[0](x,lambda x: self.self_attention_block(x,x,x,tgt_mask))
-        x = self.residual_connections[1](x, lambda x,encoder_output: self.cross_attention_block(x,encoder_output,encoder_output,src_mask))
+        x = self.residual_connections[1](x, lambda x: self.cross_attention_block(x,encoder_output,encoder_output,src_mask))
         x = self.residual_connections[2](x,self.feed_forward_block)
         return x
 
-class Decoder(nn.module):
+class Decoder(nn.Module):
     
     def __init__(self, layers:nn.ModuleList):
         super().__init__()
@@ -223,7 +224,7 @@ class Decoder(nn.module):
         
         return self.norm(x)
 
-class ProjectionLayer(nn.module):
+class ProjectionLayer(nn.Module):
     
     def __init__(self, d_model:int, vocab_size:int) -> None:
         
@@ -233,7 +234,7 @@ class ProjectionLayer(nn.module):
     def forward(self,x):
         return torch.log_softmax(self.proj(x), dim = -1)
     
-class Transformer(nn.module):
+class Transformer(nn.Module):
 
     def __init__(self, 
                 encoder: Encoder, 

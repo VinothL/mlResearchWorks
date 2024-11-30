@@ -2,4 +2,15 @@ env/
 __pycache__/
 *.pyc
 .DS_Store
-*.ipynb
+.vscode/
+.idea/
+*.log
+*.swp
+*.swo
+.env
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+weights/
+runs/
